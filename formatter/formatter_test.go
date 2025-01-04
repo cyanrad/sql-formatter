@@ -59,10 +59,18 @@ func TestBasicSelect(t *testing.T) {
         kay.the                                                                                                         AS yay`,
 		},
 		{
-			"SELECT  x  :: VARCHAR(69420) AS what,\n y :: INT, kay.the :: \nWASSUP(12,18)  AS yay",
+			"SELECT  x  :: VARCHAR(69420) AS what,\n y :: INT, kay.the :: \nWASSUP(12,18)  AS yay, wot ::",
 			`SELECT  x                                                                                             :: VARCHAR(69420) AS what,
         y                                                                                             :: INT,
-        kay.the                                                                                       :: WASSUP(12, 18) AS yay`,
+        kay.the                                                                                       :: WASSUP(12, 18) AS yay,
+        wot`,
+		},
+		{
+			"SELECT  test(), COALESCE(a.name,Unknown,(4)) :: VARCHAR(300) AS area_name, trim(area_name) :: VARCHAR(150)   AS area_name, test.f_sql_GENERATE_key_from_string(area_name) AS area_key",
+			`SELECT  TEST(),
+        COALESCE(a.name, unknown, (4))                                                                :: VARCHAR(300)   AS area_name,
+        TRIM(area_name)                                                                               :: VARCHAR(150)   AS area_name,
+        test.f_sql_generate_key_from_string(area_name)                                                                  AS area_key`,
 		},
 	}
 
@@ -80,7 +88,7 @@ func TestBasicSelect(t *testing.T) {
 }
 
 func TestGeneral(t *testing.T) {
-	input := "SELECT (10,18)"
+	input := "SELECT x.what('string')"
 	f := Create(input)
 	t.Log(f.tokens)
 }

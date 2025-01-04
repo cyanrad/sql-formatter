@@ -95,6 +95,25 @@ func (de DatatypeExpression) String() string {
 	return str
 }
 
+type CallExpression struct {
+	Function sqllexer.Token
+	Args     ArgsExpression
+}
+
+func (ce CallExpression) expressionNode() {}
+func (ce CallExpression) String() string {
+	str := ""
+	if len(strings.Split(ce.Function.Value, ".")) >= 2 {
+		str += strings.ToLower(ce.Function.Value) // custom function
+	} else {
+		str += strings.ToUpper(ce.Function.Value) // inbuilt function
+	}
+
+	str += ce.Args.String()
+
+	return str
+}
+
 type ArgsExpression struct {
 	Exps []Expression
 }

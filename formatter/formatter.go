@@ -81,14 +81,16 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 		exp = f.parseIdentExpression()
 	} else if f.currTypeIs(sqllexer.NUMBER) {
 		exp = f.parseNumericExpression()
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
+	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase]
 		if f.peekTypeIs(sqllexer.IDENT) {
 			exp = f.parseIdentExpression()
 		} else if f.peekTypeIs(sqllexer.NUMBER) {
 			exp = f.parseNumericExpression()
 		}
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") {
+	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") { // [todo] - this should be replaced with the OperationExpression in the future
 		exp = f.parseArgsExpression()
+	} else if f.currTypeIs(sqllexer.FUNCTION) { // [todo] - this should be replaced with the OperationExpression in the future
+		exp = f.parseCallExpression()
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
 	} else {
@@ -144,6 +146,16 @@ func (f *Formatter) parseNumericExpression() Expression { // This is bad practic
 	}
 
 	return IntExpression{Token: f.currToken}
+}
+
+func (f *Formatter) parseCallExpression() CallExpression {
+	call := CallExpression{Function: f.currToken}
+	f.nextToken()
+
+	args := f.parseArgsExpression()
+	call.Args = args
+
+	return call
 }
 
 func (f *Formatter) parseArgsExpression() ArgsExpression {
