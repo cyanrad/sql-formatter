@@ -83,7 +83,14 @@ type TypecastExpression struct {
 
 func (te TypecastExpression) expressionNode() {}
 func (te TypecastExpression) Type() string    { return "typecast" }
-func (te TypecastExpression) String() string  { return ":: " + te.Datatype.String() }
+func (te TypecastExpression) String() string {
+	str := "::"
+	if te.Datatype.Datatype.Type != sqllexer.ERROR {
+		str += " " + te.Datatype.String()
+	}
+
+	return str
+}
 
 type DatatypeExpression struct {
 	Datatype sqllexer.Token
@@ -167,6 +174,26 @@ func (we WindowExpression) String() string {
 	str := we.Call.String()
 	str += " OVER "
 	str += we.Args.String()
+
+	return str
+}
+
+type AsExpression struct {
+	Token sqllexer.Token // not an ident expression because it can't handle qualified identifiers
+}
+
+func (ae AsExpression) expressionNode() {}
+func (ae AsExpression) Type() string    { return "as" }
+func (ae AsExpression) String() string {
+	str := "AS"
+
+	if ae.Token.Type != sqllexer.ERROR {
+		if ae.Token.Type == sqllexer.IDENT {
+			str += " " + strings.ToLower(ae.Token.Value)
+		} else if ae.Token.Type == sqllexer.QUOTED_IDENT {
+			str += " " + ae.Token.Value
+		}
+	}
 
 	return str
 }

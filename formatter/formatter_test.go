@@ -74,9 +74,9 @@ func TestBasicSelect(t *testing.T) {
 		{
 			"SELECT  x  :: VARCHAR(69420) AS what,\n y :: INT, kay.the :: \nWASSUP(12,18)  AS yay, wot ::",
 			`SELECT  x                                                                                             :: VARCHAR(69420) AS what,
-        y                                                                                             :: INT,
+        y :: INT,
         kay.the                                                                                       :: WASSUP(12, 18) AS yay,
-        wot
+        wot ::
 ;`,
 		},
 		{
@@ -98,7 +98,7 @@ func TestBasicSelect(t *testing.T) {
         area_nk,
         tenant_sk,
         city_sk,
-        zone_sk
+        zone_sk 
         etl_source_sk,
         trim(area_name)                                                                                :: VARCHAR(150)  AS area_name,
         TRIM(area_name_ar)                                                                :: VARCHAR(150)  AS area_name_ar,
@@ -116,8 +116,7 @@ SELECT      'unknown'                                                           
         area_nk,
         tenant_sk,
         city_sk,
-        zone_sk,
-        etl_source_sk,
+        zone_sk etl_source_sk,
         TRIM(area_name)                                                                               :: VARCHAR(150)   AS area_name,
         TRIM(area_name_ar)                                                                            :: VARCHAR(150)   AS area_name_ar,
         area_reference_number
@@ -150,8 +149,8 @@ SELECT  'unknown'                                                               
 ;`,
 		},
 		{
-			"SELECT (LAG(date_ending_nk, 1)\n OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk ))   :: DATE            AS previous_contract_date_ending,",
-			`SELECT  (LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk))     :: DATE           AS previous_contract_date_ending
+			"SELECT LAG(date_ending_nk, 1)\n OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk )   :: DATE            AS previous_contract_date_ending,",
+			`SELECT  LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk)       :: DATE           AS previous_contract_date_ending
 ;`,
 		},
 	}
@@ -161,7 +160,9 @@ SELECT  'unknown'                                                               
 		actual := f.Format()
 
 		if tests[i].output != actual {
-			t.Fatalf("error [%d]:\n< EXPECTED >\n%s\n\n< ACTUAL >\n%s", i, tests[i].output, actual)
+			fmt.Printf("error [%d]:\n< EXPECTED >\n%s\n\n< ACTUAL >\n%s", i, tests[i].output, actual)
+			fmt.Printf("\n< EXPECTED BYTES >\n%v\n\n< ACTUAL BYTES >\n%v", []byte(tests[i].output), []byte(actual))
+			t.Fatal()
 		} else {
 			fmt.Printf("< LOGGING [%d] >\n%s\n\n", i, actual)
 		}
@@ -171,7 +172,7 @@ SELECT  'unknown'                                                               
 
 func TestGeneral(t *testing.T) {
 	input := `
-SELECT  TRUE
+SELECT  xyz ::INT :: INT AS what
 `
 	f := Create(input)
 	fmt.Println(f.tokens)

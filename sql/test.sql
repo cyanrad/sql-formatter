@@ -27,7 +27,7 @@ SELECT  (city_sk || '|' || odl.f_sql_gnerate_nk_from_string(area_name) || '|' ||
         TRIM(area_name_ar)                                                                            :: VARCHAR(150)   AS area_name_ar,
         area_reference_number
 SELECT  'unknown'                                                                                                       AS area_sk,
-        0                                                                                                               AS area_nk,
+        0              G                                                                                                 AS area_nk,
         'unknown'                                                                                                       AS tenant_sk,
         'unknown'                                                                                                       AS city_sk,
         'unknown'                                                                                                       AS zone_sk,
@@ -58,3 +58,8 @@ SELECT      'unknown'                                                           
 ;
 
 SELECT  (LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk))     :: DATE           AS previous_contract_date_ending,
+
+SELECT  x                                                                                             :: VARCHAR(69420) AS what,
+        y :: INT,
+        kay.the                                                                                       :: WASSUP(12, 18) AS yay,
+        wot :: 

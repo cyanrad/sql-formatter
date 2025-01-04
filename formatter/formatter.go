@@ -47,31 +47,11 @@ func (f *Formatter) formatSelectStatement() string {
 	ss := SelectStatement{}
 	f.nextToken()
 
-	for !(isStatementKeyword(f.currToken) || f.currTypeIs(sqllexer.EOF) || f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
-		// [todo] - this should be broken down into a fromatSelectColumnStatement
-		sc := SelectedColumn{}
+	for !(isStatementKeyword(f.currToken) ||
+		f.currTypeIs(sqllexer.EOF) ||
+		f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
 
-		exp, _ := f.parseExpression()
-		sc.Exp = exp
-		f.nextToken()
-
-		if f.currTokenIs(sqllexer.OPERATOR, "::") {
-			sc.Cast = f.parseTypecastExpression()
-			f.nextToken()
-		}
-
-		if f.currTokenIs(sqllexer.IDENT, "AS") {
-			if (f.peekTypeIs(sqllexer.IDENT) || f.peekTypeIs(sqllexer.QUOTED_IDENT)) && !isStatementKeyword(f.peekToken) {
-				f.nextToken()
-				sc.Alias = f.currToken
-			}
-			f.nextToken()
-		}
-
-		if f.currTokenIs(sqllexer.PUNCTUATION, ",") {
-			f.nextToken()
-		}
-
+		sc := f.formatSelectedColumnStatement()
 		ss.Columns = append(ss.Columns, sc)
 	}
 
@@ -82,9 +62,50 @@ func (f *Formatter) formatSelectStatement() string {
 	return ss.Format(0)
 }
 
+func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
+	sc := SelectedColumn{Exps: []Expression{}}
+
+	var exp Expression
+	for !(f.currTokenIs(sqllexer.PUNCTUATION, ",") ||
+		f.currTokenIs(sqllexer.IDENT, "AS") ||
+		f.currTypeIs(sqllexer.EOF) ||
+		f.currTokenIs(sqllexer.PUNCTUATION, ";")) { // [todo] I should prolly turn this into a map
+		exp = f.parseExpression()
+		if exp == nil {
+			break
+		}
+
+		// handling the final typecast
+		if exp.Type() == "typecast" && f.peekTokenIs(sqllexer.IDENT, "AS") {
+			sc.Cast = exp.(TypecastExpression)
+			sc.hasCast = true
+			f.nextToken()
+			break
+		}
+
+		sc.Exps = append(sc.Exps, exp)
+		f.nextToken()
+	}
+
+	if f.currTokenIs(sqllexer.IDENT, "AS") {
+		sc.hasAlias = true
+		if (f.peekTypeIs(sqllexer.IDENT) && !isStatementKeyword(f.peekToken)) || f.peekTypeIs(sqllexer.QUOTED_IDENT) {
+			f.nextToken()
+			sc.Alias = AsExpression{Token: f.currToken}
+		}
+		f.nextToken()
+	}
+
+	if f.currTokenIs(sqllexer.PUNCTUATION, ",") {
+		f.nextToken()
+	}
+
+	return sc
+}
+
 // expects current token to NOT be a keyword
 // expect that when it's done executing the nextToken is the start of the next section
-func (f *Formatter) parseExpression() (Expression, bool) {
+func (f *Formatter) parseExpression() Expression {
 	var exp Expression
 
 	if f.currTypeIs(sqllexer.IDENT) {
@@ -95,50 +116,35 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 		exp = f.parseNumericExpression()
 	} else if f.currTypeIs(sqllexer.STRING) {
 		exp = f.parseStringExpression()
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase] - stupid piece of shit istg
-		if f.peekTypeIs(sqllexer.IDENT) {
-			exp = f.parseIdentifier()
-		} else if f.peekTypeIs(sqllexer.QUOTED_IDENT) {
-			exp = f.parseIdentExpression()
-		} else if f.peekTypeIs(sqllexer.NUMBER) {
-			exp = f.parseNumericExpression()
-		}
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") || f.peekTypeIs(sqllexer.OPERATOR) {
+	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") {
 		exp = f.parseGroupedExpression()
 	} else if f.currTypeIs(sqllexer.FUNCTION) { // [todo] - this should be replaced with the OperationExpression in the future
 		callExp := f.parseCallExpression()
+		exp = callExp
 
 		if f.peekTokenIs(sqllexer.IDENT, "OVER") {
 			f.nextToken()
 			exp = f.parseWindowExpression(callExp)
-		} else {
-			exp = callExp
 		}
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
 	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) {
 		exp = f.parseOperatorExpression()
-	} else {
-		return nil, false
 	}
 
-	return exp, true
+	return exp
 }
 
 func (f *Formatter) parseIdentifier() Expression {
-	// [edgecase] - in the case a dumbass does ".asdf"
-	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
-		f.nextToken()
-		f.currToken.Value = "." + f.currToken.Value
-	}
-
 	if isBoolean(f.currToken) {
 		return f.parseBooleanExpression()
 	} else if isOperationKeyword(f.currToken) {
 		return f.parseOperationKeywordExpression()
-	} else {
+	} else if !isStatementKeyword(f.currToken) {
 		return f.parseIdentExpression()
 	}
+
+	return nil
 }
 
 func (f *Formatter) parseBooleanExpression() BooleanExpression {
@@ -154,12 +160,6 @@ func (f *Formatter) parseOperationKeywordExpression() OperationKeywordExpression
 }
 
 func (f *Formatter) parseQuotedIdentExpression() Expression { // this is should actually be considered a legal crime
-	// [edgecase] - in the case a dumbass does "."asdf""
-	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
-		f.nextToken()
-		f.currToken.Value = "." + f.currToken.Value
-	}
-
 	// [edgecase] - because sqllexer doesn't treat quoted strings the same as other things
 	if f.peekTokenIs(sqllexer.PUNCTUATION, ".") {
 		return f.parseCallExpression()
@@ -216,9 +216,12 @@ func (f *Formatter) parseGroupedExpression() GroupedExpression {
 	}
 	f.nextToken()
 
-	for !f.currTokenIs(sqllexer.PUNCTUATION, ")") {
-		e, ok := f.parseExpression()
-		if !ok {
+	for !(f.currTokenIs(sqllexer.PUNCTUATION, ")") ||
+		f.currTokenIs(sqllexer.IDENT, "AS") ||
+		f.currTypeIs(sqllexer.EOF) ||
+		f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
+		e := f.parseExpression()
+		if e == nil {
 			break
 		}
 		f.nextToken()
