@@ -88,7 +88,7 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 			exp = f.parseNumericExpression()
 		}
 	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") {
-		exp = f.parseGroupExpression()
+		exp = f.parseArgsExpression()
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
 	} else {
@@ -146,8 +146,8 @@ func (f *Formatter) parseNumericExpression() Expression { // This is bad practic
 	return IntExpression{Token: f.currToken}
 }
 
-func (f *Formatter) parseGroupExpression() GroupExpression {
-	group := GroupExpression{Exps: []Expression{}}
+func (f *Formatter) parseArgsExpression() ArgsExpression {
+	args := ArgsExpression{Exps: []Expression{}}
 	f.nextToken()
 
 	for !f.currTokenIs(sqllexer.PUNCTUATION, ")") {
@@ -161,10 +161,10 @@ func (f *Formatter) parseGroupExpression() GroupExpression {
 			f.nextToken()
 		}
 
-		group.Exps = append(group.Exps, e)
+		args.Exps = append(args.Exps, e)
 	}
 
-	return group
+	return args
 }
 
 func (f *Formatter) parseTypecastExpression() TypecastExpression {
@@ -179,11 +179,11 @@ func (f *Formatter) parseTypecastExpression() TypecastExpression {
 }
 
 func (f *Formatter) parseDatatypeExpression() DatatypeExpression {
-	exp := DatatypeExpression{Datatype: f.currToken, Args: GroupExpression{}}
+	exp := DatatypeExpression{Datatype: f.currToken, Args: ArgsExpression{}}
 
 	if f.peekTokenIs(sqllexer.PUNCTUATION, "(") {
 		f.nextToken()
-		ge := f.parseGroupExpression()
+		ge := f.parseArgsExpression()
 		exp.Args = ge
 		exp.hasArgs = true
 	}

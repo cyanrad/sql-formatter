@@ -76,7 +76,7 @@ func (te TypecastExpression) String() string {
 
 type DatatypeExpression struct {
 	Datatype sqllexer.Token
-	Args     GroupExpression
+	Args     ArgsExpression
 	hasArgs  bool
 }
 
@@ -95,19 +95,18 @@ func (de DatatypeExpression) String() string {
 	return str
 }
 
-// should be renamed to args expression
-type GroupExpression struct {
+type ArgsExpression struct {
 	Exps []Expression
 }
 
-func (ge GroupExpression) expressionNode() {}
-func (ge GroupExpression) String() string {
+func (ae ArgsExpression) expressionNode() {}
+func (ae ArgsExpression) String() string {
 	str := "("
 
-	for i := 0; i < len(ge.Exps); i++ {
-		str += ge.Exps[i].String()
+	for i := 0; i < len(ae.Exps); i++ {
+		str += ae.Exps[i].String()
 
-		if i != len(ge.Exps)-1 {
+		if i != len(ae.Exps)-1 {
 			str += ", "
 		}
 	}
