@@ -11,14 +11,14 @@ type SelectStatement struct {
 }
 
 func (ss SelectStatement) Format(indent int) string {
-	formatted := padding(indent) + "SELECT" + padding(FIRST_COLUMN_WIDTH-6)
+	formatted := padding(indent, 0) + "SELECT" + padding(FIRST_COLUMN_WIDTH-6, 1)
 	indentTracker := len(formatted)
 
 	for i := 0; i < len(ss.Columns); i++ {
 		formatted += ss.Columns[i].Format(indentTracker)
 
 		if i != len(ss.Columns)-1 {
-			padding := padding(indent + FIRST_COLUMN_WIDTH)
+			padding := padding(indent+FIRST_COLUMN_WIDTH, 0)
 			formatted += ",\n" + padding
 			indentTracker = len(padding)
 		}
@@ -42,14 +42,14 @@ func (sc SelectedColumn) Format(indent int) string {
 	indentTracker := indent + len(formatted)
 
 	if sc.Cast.Datatype.Datatype.Type != sqllexer.ERROR {
-		castStr := padding(CAST_COLUMN_WIDTH-indentTracker) + sc.Cast.String()
+		castStr := padding(CAST_COLUMN_WIDTH-indentTracker, 1) + sc.Cast.String()
 		indentTracker += len(castStr)
 		formatted += castStr
 	}
 
 	// we should handle cases where the current length is larger than 120
 	if sc.Alias.Type != sqllexer.ERROR {
-		formatted += padding(SECOND_COLUMN_WIDTH-indentTracker) + "AS " + strings.ToLower(sc.Alias.Value)
+		formatted += padding(SECOND_COLUMN_WIDTH-indentTracker, 1) + "AS " + strings.ToLower(sc.Alias.Value)
 	}
 
 	return formatted

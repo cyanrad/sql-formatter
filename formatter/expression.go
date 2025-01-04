@@ -36,6 +36,14 @@ func (ie IdentExpression) expressionNode() {}
 func (ie IdentExpression) Type() string    { return "identifier" }
 func (ie IdentExpression) String() string  { return strings.ToLower(ie.Token.Value) }
 
+type QuotedIdentExpression struct {
+	Token sqllexer.Token
+}
+
+func (qie QuotedIdentExpression) expressionNode() {}
+func (qie QuotedIdentExpression) Type() string    { return "quoted-identifier" }
+func (qie QuotedIdentExpression) String() string  { return qie.Token.Value }
+
 type OperatorExpression struct {
 	Token sqllexer.Token
 }

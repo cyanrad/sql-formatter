@@ -13,8 +13,12 @@ const (
 	LEVEL_INDENT        = 4
 )
 
-func padding(indent int) string {
+func padding(indent int, least int) string {
 	if indent <= 0 {
+		if least > 0 {
+			return strings.Repeat(" ", least)
+		}
+
 		return ""
 	}
 

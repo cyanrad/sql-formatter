@@ -133,6 +133,10 @@ SELECT  'unknown'                                                               
         0                                                                                                               AS area_reference_number
 ;`,
 		},
+		{
+			"SELECT \"dev_modl\".f_sql_gnerate_nk_from_string(t.trim) AS \"car_trim_new_nk\",",
+			"SELECT  \"dev_modl\".f_sql_gnerate_nk_from_string(t.trim)                                                                 AS \"car_trim_new_nk\"\n;",
+		},
 	}
 
 	for i := 0; i < len(tests); i++ {
@@ -150,12 +154,8 @@ SELECT  'unknown'                                                               
 
 func TestGeneral(t *testing.T) {
 	input := `
-SELECT 4
-;
-
-SELECT 5
-;	
-	`
+SELECT  "dev_modl".test()
+`
 	f := Create(input)
 	fmt.Println(f.tokens)
 	formatted := f.Format()

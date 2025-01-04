@@ -61,7 +61,7 @@ func (f *Formatter) formatSelectStatement() string {
 		}
 
 		if f.currTokenIs(sqllexer.IDENT, "AS") {
-			if f.peekTypeIs(sqllexer.IDENT) && !isKeyword(f.peekToken) {
+			if (f.peekTypeIs(sqllexer.IDENT) || f.peekTypeIs(sqllexer.QUOTED_IDENT)) && !isKeyword(f.peekToken) {
 				f.nextToken()
 				sc.Alias = f.currToken
 			}
@@ -89,12 +89,16 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 
 	if f.currTypeIs(sqllexer.IDENT) {
 		exp = f.parseIdentExpression()
+	} else if f.currTypeIs(sqllexer.QUOTED_IDENT) {
+		exp = f.parseQuotedIdentExpression()
 	} else if f.currTypeIs(sqllexer.NUMBER) {
 		exp = f.parseNumericExpression()
 	} else if f.currTypeIs(sqllexer.STRING) {
 		exp = f.parseStringExpression()
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase]
+	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase] - stupid piece of shit istg
 		if f.peekTypeIs(sqllexer.IDENT) {
+			exp = f.parseIdentExpression()
+		} else if f.peekTypeIs(sqllexer.QUOTED_IDENT) {
 			exp = f.parseIdentExpression()
 		} else if f.peekTypeIs(sqllexer.NUMBER) {
 			exp = f.parseNumericExpression()
@@ -124,6 +128,21 @@ func (f *Formatter) parseIdentExpression() IdentExpression {
 	return IdentExpression{Token: f.currToken}
 }
 
+func (f *Formatter) parseQuotedIdentExpression() Expression { // this is should actually be considered a legal crime
+	// [edgecase] - in the case a dumbass does "."asdf""
+	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
+		f.nextToken()
+		f.currToken.Value = "." + f.currToken.Value
+	}
+
+	// [edgecase] - because sqllexer doesn't treat quoted strings the same as other things
+	if f.peekTokenIs(sqllexer.PUNCTUATION, ".") {
+		return f.parseCallExpression()
+	} else {
+		return QuotedIdentExpression{Token: f.currToken}
+	}
+}
+
 func (f *Formatter) parseNumericExpression() NumericExpression {
 	// [edgecase] - in the case a dumbass does ".123"
 	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
@@ -144,6 +163,11 @@ func (f *Formatter) parseOperatorExpression() OperatorExpression {
 
 func (f *Formatter) parseCallExpression() CallExpression {
 	call := CallExpression{Function: f.currToken}
+	if f.currTypeIs(sqllexer.QUOTED_IDENT) {
+		f.nextToken() // skipping '.'
+		f.nextToken() // at the function call name
+		call.Function.Value += "." + f.currToken.Value
+	}
 	f.nextToken()
 
 	args := f.parseGroupedExpression()
