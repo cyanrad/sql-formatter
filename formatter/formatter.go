@@ -25,19 +25,24 @@ func Create(sql string) Formatter {
 }
 
 func (f *Formatter) Format() string {
-	var s string
+	formatted := ""
 
 	for !f.currTokenIs(sqllexer.EOF, "") {
+		s := ""
 		if f.currTokenIs(sqllexer.IDENT, "SELECT") {
-			s = f.formatSelectStatement()
+			s = f.formatSelectStatement() + "\n;\n"
 		}
 
-		f.nextToken()
+		formatted += s
+		if s == "" {
+			f.nextToken()
+		}
 	}
 
-	return s
+	return formatted[:len(formatted)-1]
 }
 
+// when it's done currToken will be the first token of the next statement
 func (f *Formatter) formatSelectStatement() string {
 	ss := SelectStatement{}
 	f.nextToken()
