@@ -51,7 +51,7 @@ func clearWhiteSpace(tokens []sqllexer.Token) []sqllexer.Token {
 	return newTokens
 }
 
-var keywords = map[string]struct{}{
+var statementKeywords = map[string]struct{}{
 	"SELECT":    {},
 	"FROM":      {},
 	"WHERE":     {},
@@ -62,12 +62,6 @@ var keywords = map[string]struct{}{
 	"INNER":     {},
 	"OUTER":     {},
 	"JOIN":      {},
-	"ON":        {},
-	"CASE":      {},
-	"WHEN":      {},
-	"THEN":      {},
-	"ELSE":      {},
-	"END":       {},
 	"HAVING":    {},
 	"INSERT":    {},
 	"UPDATE":    {},
@@ -78,34 +72,57 @@ var keywords = map[string]struct{}{
 	"TRUNCATE":  {},
 	"MERGE":     {},
 	"UNION":     {},
-	"ALL":       {},
-	"DISTINCT":  {},
 	"EXCEPT":    {},
 	"INTERSECT": {},
-	"NOT":       {},
-	"LIKE":      {},
-	"IN":        {},
-	"BETWEEN":   {},
-	"AND":       {},
-	"OR":        {},
-	"IS":        {},
-	"EXISTS":    {},
-	"AS":        {},
 	"INTO":      {},
 	"VALUES":    {},
 	"LIMIT":     {},
 	"OFFSET":    {},
-	"FETCH":     {},
-	"FOR":       {},
-	"BY":        {},
-	"ASC":       {},
-	"DESC":      {},
 	"WITH":      {},
 	"QUALIFY":   {},
 }
 
-func isKeyword(t sqllexer.Token) bool {
-	_, ok := keywords[strings.ToUpper(t.Value)]
+func isStatementKeyword(t sqllexer.Token) bool {
+	_, ok := statementKeywords[strings.ToUpper(t.Value)]
+	return ok && t.Type == sqllexer.IDENT
+}
+
+var operationKeywords = map[string]struct{}{
+	"ON":         {},
+	"CASE":       {},
+	"WHEN":       {},
+	"THEN":       {},
+	"ELSE":       {},
+	"END":        {},
+	"ALL":        {},
+	"DISTINCT":   {},
+	"NOT":        {},
+	"LIKE":       {},
+	"IN":         {},
+	"BETWEEN":    {},
+	"AND":        {},
+	"OR":         {},
+	"IS":         {},
+	"EXISTS":     {},
+	"AS":         {},
+	"FETCH":      {},
+	"FOR":        {},
+	"BY":         {},
+	"ASC":        {},
+	"DESC":       {},
+	"ROWS":       {},
+	"ROW":        {},
+	"PRECEDING":  {},
+	"FOLLOWING ": {},
+	"CURRENT":    {},
+	"UNBOUNDED":  {},
+	"OVER":       {},
+	"PARTITION":  {},
+	"ORDER":      {},
+}
+
+func isOperationKeyword(t sqllexer.Token) bool {
+	_, ok := operationKeywords[strings.ToUpper(t.Value)]
 	return ok && t.Type == sqllexer.IDENT
 }
 

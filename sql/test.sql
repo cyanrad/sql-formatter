@@ -56,3 +56,5 @@ SELECT      'unknown'                                                           
         'Unknown'                                                                         AS area_name_ar,
         0                                                                                              AS area_reference_number
 ;
+
+SELECT  (LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk))     :: DATE           AS previous_contract_date_ending,

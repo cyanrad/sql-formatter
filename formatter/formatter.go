@@ -47,7 +47,7 @@ func (f *Formatter) formatSelectStatement() string {
 	ss := SelectStatement{}
 	f.nextToken()
 
-	for !(isKeyword(f.currToken) || f.currTypeIs(sqllexer.EOF) || f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
+	for !(isStatementKeyword(f.currToken) || f.currTypeIs(sqllexer.EOF) || f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
 		// [todo] - this should be broken down into a fromatSelectColumnStatement
 		sc := SelectedColumn{}
 
@@ -61,7 +61,7 @@ func (f *Formatter) formatSelectStatement() string {
 		}
 
 		if f.currTokenIs(sqllexer.IDENT, "AS") {
-			if (f.peekTypeIs(sqllexer.IDENT) || f.peekTypeIs(sqllexer.QUOTED_IDENT)) && !isKeyword(f.peekToken) {
+			if (f.peekTypeIs(sqllexer.IDENT) || f.peekTypeIs(sqllexer.QUOTED_IDENT)) && !isStatementKeyword(f.peekToken) {
 				f.nextToken()
 				sc.Alias = f.currToken
 			}
@@ -106,7 +106,14 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") || f.peekTypeIs(sqllexer.OPERATOR) {
 		exp = f.parseGroupedExpression()
 	} else if f.currTypeIs(sqllexer.FUNCTION) { // [todo] - this should be replaced with the OperationExpression in the future
-		exp = f.parseCallExpression()
+		callExp := f.parseCallExpression()
+
+		if f.peekTokenIs(sqllexer.IDENT, "OVER") {
+			f.nextToken()
+			exp = f.parseWindowExpression(callExp)
+		} else {
+			exp = callExp
+		}
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
 	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) {
@@ -127,6 +134,8 @@ func (f *Formatter) parseIdentifier() Expression {
 
 	if isBoolean(f.currToken) {
 		return f.parseBooleanExpression()
+	} else if isOperationKeyword(f.currToken) {
+		return f.parseOperationKeywordExpression()
 	} else {
 		return f.parseIdentExpression()
 	}
@@ -138,6 +147,10 @@ func (f *Formatter) parseBooleanExpression() BooleanExpression {
 
 func (f *Formatter) parseIdentExpression() IdentExpression {
 	return IdentExpression{Token: f.currToken}
+}
+
+func (f *Formatter) parseOperationKeywordExpression() OperationKeywordExpression {
+	return OperationKeywordExpression{Token: f.currToken}
 }
 
 func (f *Formatter) parseQuotedIdentExpression() Expression { // this is should actually be considered a legal crime
@@ -186,6 +199,14 @@ func (f *Formatter) parseCallExpression() CallExpression {
 	call.Args = args
 
 	return call
+}
+
+func (f *Formatter) parseWindowExpression(call CallExpression) WindowExpression {
+	window := WindowExpression{Call: call}
+	f.nextToken()
+	window.Args = f.parseGroupedExpression()
+
+	return window
 }
 
 func (f *Formatter) parseGroupedExpression() GroupedExpression {

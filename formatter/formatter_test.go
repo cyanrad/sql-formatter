@@ -144,6 +144,16 @@ SELECT  'unknown'                                                               
         NULL
 ;`,
 		},
+		{
+			"SELECT  ROW_NUMBER() OVER (PARTITION by row1 ORdER BY xyz DESC)",
+			`SELECT  ROW_NUMBER() OVER (PARTITION BY row1 ORDER BY xyz DESC)
+;`,
+		},
+		{
+			"SELECT (LAG(date_ending_nk, 1)\n OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk ))   :: DATE            AS previous_contract_date_ending,",
+			`SELECT  (LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk))     :: DATE           AS previous_contract_date_ending
+;`,
+		},
 	}
 
 	for i := 0; i < len(tests); i++ {

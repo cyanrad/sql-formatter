@@ -44,6 +44,14 @@ func (ie IdentExpression) expressionNode() {}
 func (ie IdentExpression) Type() string    { return "identifier" }
 func (ie IdentExpression) String() string  { return strings.ToLower(ie.Token.Value) }
 
+type OperationKeywordExpression struct {
+	Token sqllexer.Token
+}
+
+func (oe OperationKeywordExpression) expressionNode() {}
+func (oe OperationKeywordExpression) Type() string    { return "operation-keyword" }
+func (oe OperationKeywordExpression) String() string  { return strings.ToUpper(oe.Token.Value) }
+
 type QuotedIdentExpression struct {
 	Token sqllexer.Token
 }
@@ -145,5 +153,20 @@ func (ge GroupedExpression) String() string {
 	if ge.HasParen {
 		str += ")"
 	}
+	return str
+}
+
+type WindowExpression struct {
+	Call CallExpression
+	Args GroupedExpression
+}
+
+func (we WindowExpression) expressionNode() {}
+func (we WindowExpression) Type() string    { return "window-function" }
+func (we WindowExpression) String() string {
+	str := we.Call.String()
+	str += " OVER "
+	str += we.Args.String()
+
 	return str
 }
