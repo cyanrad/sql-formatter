@@ -88,7 +88,7 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 	var exp Expression
 
 	if f.currTypeIs(sqllexer.IDENT) {
-		exp = f.parseIdentExpression()
+		exp = f.parseIdentifier()
 	} else if f.currTypeIs(sqllexer.QUOTED_IDENT) {
 		exp = f.parseQuotedIdentExpression()
 	} else if f.currTypeIs(sqllexer.NUMBER) {
@@ -97,7 +97,7 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 		exp = f.parseStringExpression()
 	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase] - stupid piece of shit istg
 		if f.peekTypeIs(sqllexer.IDENT) {
-			exp = f.parseIdentExpression()
+			exp = f.parseIdentifier()
 		} else if f.peekTypeIs(sqllexer.QUOTED_IDENT) {
 			exp = f.parseIdentExpression()
 		} else if f.peekTypeIs(sqllexer.NUMBER) {
@@ -118,13 +118,25 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 	return exp, true
 }
 
-func (f *Formatter) parseIdentExpression() IdentExpression {
+func (f *Formatter) parseIdentifier() Expression {
 	// [edgecase] - in the case a dumbass does ".asdf"
 	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
 		f.nextToken()
 		f.currToken.Value = "." + f.currToken.Value
 	}
 
+	if isBoolean(f.currToken) {
+		return f.parseBooleanExpression()
+	} else {
+		return f.parseIdentExpression()
+	}
+}
+
+func (f *Formatter) parseBooleanExpression() BooleanExpression {
+	return BooleanExpression{Token: f.currToken}
+}
+
+func (f *Formatter) parseIdentExpression() IdentExpression {
 	return IdentExpression{Token: f.currToken}
 }
 

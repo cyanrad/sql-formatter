@@ -137,6 +137,13 @@ SELECT  'unknown'                                                               
 			"SELECT \"dev_modl\".f_sql_gnerate_nk_from_string(t.trim) AS \"car_trim_new_nk\",",
 			"SELECT  \"dev_modl\".f_sql_gnerate_nk_from_string(t.trim)                                                                 AS \"car_trim_new_nk\"\n;",
 		},
+		{
+			"SELECT  FALSE, TRUe, null",
+			`SELECT  FALSE,
+        TRUE,
+        NULL
+;`,
+		},
 	}
 
 	for i := 0; i < len(tests); i++ {
@@ -154,7 +161,7 @@ SELECT  'unknown'                                                               
 
 func TestGeneral(t *testing.T) {
 	input := `
-SELECT  "dev_modl".test()
+SELECT  TRUE
 `
 	f := Create(input)
 	fmt.Println(f.tokens)

@@ -28,6 +28,14 @@ func (se StringExpression) expressionNode() {}
 func (se StringExpression) Type() string    { return "string" }
 func (se StringExpression) String() string  { return se.Token.Value }
 
+type BooleanExpression struct {
+	Token sqllexer.Token
+}
+
+func (be BooleanExpression) expressionNode() {}
+func (be BooleanExpression) Type() string    { return "boolean" }
+func (be BooleanExpression) String() string  { return strings.ToUpper(be.Token.Value) }
+
 type IdentExpression struct {
 	Token sqllexer.Token
 }

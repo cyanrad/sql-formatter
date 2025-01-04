@@ -82,7 +82,6 @@ var keywords = map[string]struct{}{
 	"DISTINCT":  {},
 	"EXCEPT":    {},
 	"INTERSECT": {},
-	"NULL":      {},
 	"NOT":       {},
 	"LIKE":      {},
 	"IN":        {},
@@ -107,5 +106,16 @@ var keywords = map[string]struct{}{
 
 func isKeyword(t sqllexer.Token) bool {
 	_, ok := keywords[strings.ToUpper(t.Value)]
+	return ok && t.Type == sqllexer.IDENT
+}
+
+var booleanIdentifiers = map[string]struct{}{
+	"TRUE":  {},
+	"FALSE": {},
+	"NULL":  {},
+}
+
+func isBoolean(t sqllexer.Token) bool {
+	_, ok := booleanIdentifiers[strings.ToUpper(t.Value)]
 	return ok && t.Type == sqllexer.IDENT
 }
