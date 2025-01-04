@@ -11,3 +11,7 @@ SELECT  COALESCE(a.name, 'Unknown')                                             
         test.f_sql_gnerate_key_from_string(area_name)                                                                   AS area_key
 
 SELECT  COALESCE(a.name, 'Unknown') :: VARCHAR(300) AS area_name, TRIM(area_name) :: VARCHAR(150)   AS area_name, test.f_sql_gnerate_key_from_string(area_name) AS area_key
+
+
+SELECT  (city_sk || '|' || odl.f_sql_gnerate_key_from_string(area_name) || '|' || area_nk)             :: VARCHAR(300)   AS area_sk,
+        area_nk

@@ -32,11 +32,11 @@ func TestBasicSelect(t *testing.T) {
 			"SELECT (), (3), (3 4), ((1,2),3), (3,8), (x), (y,",
 			`SELECT  (),
         (3),
-        (3, 4),
+        (3 4),
         ((1, 2), 3),
         (3, 8),
         (x),
-        (y)`,
+        (y, )`,
 		},
 		{
 			"SELeCT x,Y,z",
@@ -66,11 +66,16 @@ func TestBasicSelect(t *testing.T) {
         wot`,
 		},
 		{
-			"SELECT  test(), COALESCE(a.name,Unknown,(4)) :: VARCHAR(300) AS area_name, trim(area_name) :: VARCHAR(150)   AS area_name, test.f_sql_GENERATE_key_from_string(area_name) AS area_key",
+			"SELECT  test(), COALESCE(a.name,'Unknown',(4)) :: VARCHAR(300) AS area_name, trim(area_name) :: VARCHAR(150)   AS area_name, test.f_sql_GENERATE_key_from_string(area_name) AS area_key",
 			`SELECT  TEST(),
-        COALESCE(a.name, unknown, (4))                                                                :: VARCHAR(300)   AS area_name,
+        COALESCE(a.name, 'Unknown', (4))                                                              :: VARCHAR(300)   AS area_name,
         TRIM(area_name)                                                                               :: VARCHAR(150)   AS area_name,
         test.f_sql_generate_key_from_string(area_name)                                                                  AS area_key`,
+		},
+		{
+			"SELECT  (city_sk|| '|'|| odl.f_sql_gnerate_nk_from_StrinG(area_name) || '|' ||area_nk ) ::   VARCHAR(300)  AS area_sk, area_nk",
+			`SELECT  (city_sk || '|' || odl.f_sql_gnerate_nk_from_string(area_name) || '|' || area_nk)             :: VARCHAR(300)   AS area_sk,
+        area_nk`,
 		},
 	}
 
@@ -88,7 +93,7 @@ func TestBasicSelect(t *testing.T) {
 }
 
 func TestGeneral(t *testing.T) {
-	input := "SELECT x.what('string')"
+	input := "SELECT (4)"
 	f := Create(input)
 	t.Log(f.tokens)
 }

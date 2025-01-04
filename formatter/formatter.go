@@ -81,18 +81,22 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 		exp = f.parseIdentExpression()
 	} else if f.currTypeIs(sqllexer.NUMBER) {
 		exp = f.parseNumericExpression()
+	} else if f.currTypeIs(sqllexer.STRING) {
+		exp = f.parseStringExpression()
 	} else if f.currTokenIs(sqllexer.PUNCTUATION, ".") { // [edgecase]
 		if f.peekTypeIs(sqllexer.IDENT) {
 			exp = f.parseIdentExpression()
 		} else if f.peekTypeIs(sqllexer.NUMBER) {
 			exp = f.parseNumericExpression()
 		}
-	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") { // [todo] - this should be replaced with the OperationExpression in the future
-		exp = f.parseArgsExpression()
+	} else if f.currTokenIs(sqllexer.PUNCTUATION, "(") || f.peekTypeIs(sqllexer.OPERATOR) {
+		exp = f.parseGroupedExpression()
 	} else if f.currTypeIs(sqllexer.FUNCTION) { // [todo] - this should be replaced with the OperationExpression in the future
 		exp = f.parseCallExpression()
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
+	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) {
+		exp = f.parseOperatorExpression()
 	} else {
 		return nil, false
 	}
@@ -100,66 +104,49 @@ func (f *Formatter) parseExpression() (Expression, bool) {
 	return exp, true
 }
 
-func (f *Formatter) parseIdentExpression() Expression { // this is bad practice
+func (f *Formatter) parseIdentExpression() IdentExpression {
 	// [edgecase] - in the case a dumbass does ".asdf"
 	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
 		f.nextToken()
-		return QualifiedIdentExpression{Left: sqllexer.Token{Type: sqllexer.ERROR}, Right: f.currToken}
-	}
-
-	if f.peekTokenIs(sqllexer.PUNCTUATION, ".") {
-		qie := QualifiedIdentExpression{Left: f.currToken}
-		f.nextToken()
-
-		if f.peekTypeIs(sqllexer.IDENT) && !isKeyword(f.currToken) {
-			f.nextToken()
-			qie.Right = f.currToken
-		} else {
-			qie.Right = sqllexer.Token{Type: sqllexer.ERROR}
-		}
-
-		return qie
+		f.currToken.Value = "." + f.currToken.Value
 	}
 
 	return IdentExpression{Token: f.currToken}
 }
 
-func (f *Formatter) parseNumericExpression() Expression { // This is bad practice
+func (f *Formatter) parseNumericExpression() NumericExpression {
 	// [edgecase] - in the case a dumbass does ".123"
 	if f.currTokenIs(sqllexer.PUNCTUATION, ".") {
 		f.nextToken()
-		return DecimalExpression{Right: f.currToken}
+		f.currToken.Value = "." + f.currToken.Value
 	}
 
-	if f.peekTokenIs(sqllexer.PUNCTUATION, ".") {
-		de := DecimalExpression{Left: f.currToken}
-		f.nextToken()
+	return NumericExpression{Token: f.currToken}
+}
 
-		if f.peekTypeIs(sqllexer.NUMBER) {
-			f.nextToken()
-			de.Right = f.currToken
-		} else {
-			de.Right = sqllexer.Token{}
-		}
+func (f *Formatter) parseStringExpression() StringExpression {
+	return StringExpression{Token: f.currToken}
+}
 
-		return de
-	}
-
-	return IntExpression{Token: f.currToken}
+func (f *Formatter) parseOperatorExpression() OperatorExpression {
+	return OperatorExpression{Token: f.currToken}
 }
 
 func (f *Formatter) parseCallExpression() CallExpression {
 	call := CallExpression{Function: f.currToken}
 	f.nextToken()
 
-	args := f.parseArgsExpression()
+	args := f.parseGroupedExpression()
 	call.Args = args
 
 	return call
 }
 
-func (f *Formatter) parseArgsExpression() ArgsExpression {
-	args := ArgsExpression{Exps: []Expression{}}
+func (f *Formatter) parseGroupedExpression() GroupedExpression {
+	group := GroupedExpression{Exps: []Expression{}}
+	if f.currTokenIs(sqllexer.PUNCTUATION, "(") {
+		group.HasParen = true
+	}
 	f.nextToken()
 
 	for !f.currTokenIs(sqllexer.PUNCTUATION, ")") {
@@ -169,14 +156,10 @@ func (f *Formatter) parseArgsExpression() ArgsExpression {
 		}
 		f.nextToken()
 
-		if f.currTokenIs(sqllexer.PUNCTUATION, ",") {
-			f.nextToken()
-		}
-
-		args.Exps = append(args.Exps, e)
+		group.Exps = append(group.Exps, e)
 	}
 
-	return args
+	return group
 }
 
 func (f *Formatter) parseTypecastExpression() TypecastExpression {
@@ -191,11 +174,11 @@ func (f *Formatter) parseTypecastExpression() TypecastExpression {
 }
 
 func (f *Formatter) parseDatatypeExpression() DatatypeExpression {
-	exp := DatatypeExpression{Datatype: f.currToken, Args: ArgsExpression{}}
+	exp := DatatypeExpression{Datatype: f.currToken, Args: GroupedExpression{}}
 
 	if f.peekTokenIs(sqllexer.PUNCTUATION, "(") {
 		f.nextToken()
-		ge := f.parseArgsExpression()
+		ge := f.parseGroupedExpression()
 		exp.Args = ge
 		exp.hasArgs = true
 	}

@@ -9,60 +9,48 @@ import (
 type Expression interface {
 	expressionNode()
 	String() string
+	Type() string
 }
 
-type IntExpression struct {
+type NumericExpression struct {
 	Token sqllexer.Token
 }
 
-func (ie IntExpression) expressionNode() {}
-func (ie IntExpression) String() string  { return ie.Token.Value }
+func (ne NumericExpression) expressionNode() {}
+func (ne NumericExpression) Type() string    { return "numeric" }
+func (ne NumericExpression) String() string  { return ne.Token.Value }
 
-type DecimalExpression struct {
-	Left  sqllexer.Token
-	Right sqllexer.Token
+type StringExpression struct {
+	Token sqllexer.Token
 }
 
-func (de DecimalExpression) expressionNode() {}
-func (de DecimalExpression) String() string {
-	right := ""
-	if de.Right.Type != sqllexer.ERROR {
-		right = de.Right.Value
-	}
-
-	left := ""
-	if de.Left.Type != sqllexer.ERROR {
-		left = de.Left.Value
-	}
-
-	return left + "." + right
-}
+func (se StringExpression) expressionNode() {}
+func (se StringExpression) Type() string    { return "string" }
+func (se StringExpression) String() string  { return se.Token.Value }
 
 type IdentExpression struct {
 	Token sqllexer.Token
 }
 
 func (ie IdentExpression) expressionNode() {}
+func (ie IdentExpression) Type() string    { return "identifier" }
 func (ie IdentExpression) String() string  { return strings.ToLower(ie.Token.Value) }
 
-type QualifiedIdentExpression struct {
-	Left  sqllexer.Token
-	Right sqllexer.Token
+type OperatorExpression struct {
+	Token sqllexer.Token
 }
 
-func (qie QualifiedIdentExpression) expressionNode() {}
-func (qie QualifiedIdentExpression) String() string {
-	right := ""
-	if qie.Right.Type != sqllexer.ERROR {
-		right = qie.Right.Value
+func (oe OperatorExpression) expressionNode() {}
+func (oe OperatorExpression) Type() string    { return "operator" }
+func (oe OperatorExpression) String() string {
+	switch oe.Token.Value {
+	case ",":
+		return ", "
+	case ".":
+		return "."
+	default:
+		return " " + oe.Token.Value + " "
 	}
-
-	left := ""
-	if qie.Left.Type != sqllexer.ERROR {
-		left = qie.Left.Value
-	}
-
-	return left + "." + right
 }
 
 type TypecastExpression struct {
@@ -70,17 +58,17 @@ type TypecastExpression struct {
 }
 
 func (te TypecastExpression) expressionNode() {}
-func (te TypecastExpression) String() string {
-	return ":: " + te.Datatype.String()
-}
+func (te TypecastExpression) Type() string    { return "typecast" }
+func (te TypecastExpression) String() string  { return ":: " + te.Datatype.String() }
 
 type DatatypeExpression struct {
 	Datatype sqllexer.Token
-	Args     ArgsExpression
+	Args     GroupedExpression
 	hasArgs  bool
 }
 
 func (de DatatypeExpression) expressionNode() {}
+func (de DatatypeExpression) Type() string    { return "datatype" }
 func (de DatatypeExpression) String() string {
 	str := ""
 
@@ -97,10 +85,11 @@ func (de DatatypeExpression) String() string {
 
 type CallExpression struct {
 	Function sqllexer.Token
-	Args     ArgsExpression
+	Args     GroupedExpression
 }
 
 func (ce CallExpression) expressionNode() {}
+func (ce CallExpression) Type() string    { return "call" }
 func (ce CallExpression) String() string {
 	str := ""
 	if len(strings.Split(ce.Function.Value, ".")) >= 2 {
@@ -114,22 +103,31 @@ func (ce CallExpression) String() string {
 	return str
 }
 
-type ArgsExpression struct {
-	Exps []Expression
+type GroupedExpression struct {
+	Exps     []Expression
+	HasParen bool
 }
 
-func (ae ArgsExpression) expressionNode() {}
-func (ae ArgsExpression) String() string {
-	str := "("
-
-	for i := 0; i < len(ae.Exps); i++ {
-		str += ae.Exps[i].String()
-
-		if i != len(ae.Exps)-1 {
-			str += ", "
-		}
+func (ge GroupedExpression) expressionNode() {}
+func (ge GroupedExpression) Type() string    { return "group" }
+func (ge GroupedExpression) String() string {
+	str := ""
+	if ge.HasParen {
+		str += "("
 	}
 
-	str += ")"
+	prevType := "operator"
+	for i := 0; i < len(ge.Exps); i++ {
+		if !(prevType == "operator") && ge.Exps[i].Type() != "operator" { // this is so fucking bad holy shit
+			str += " "
+		}
+
+		str += ge.Exps[i].String()
+		prevType = ge.Exps[i].Type()
+	}
+
+	if ge.HasParen {
+		str += ")"
+	}
 	return str
 }
