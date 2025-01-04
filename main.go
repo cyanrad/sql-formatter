@@ -12,7 +12,7 @@ func main() {
 	flag.StringVar(&file, "file", "", "File to read from")
 	flag.Parse()
 
-	fmt.Println("formatting:" + file)
+	// fmt.Println("formatting:" + file)
 
 	sql, err := os.ReadFile(file)
 	if err != nil {
@@ -20,5 +20,5 @@ func main() {
 	}
 
 	f := formatter.Create(string(sql))
-	fmt.Println(f.Format())
+	fmt.Print(f.Format())
 }

@@ -14,6 +14,10 @@ const (
 )
 
 func padding(indent int) string {
+	if indent <= 0 {
+		return ""
+	}
+
 	return strings.Repeat(" ", indent)
 }
 

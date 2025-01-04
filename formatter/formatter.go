@@ -47,7 +47,8 @@ func (f *Formatter) formatSelectStatement() string {
 	ss := SelectStatement{}
 	f.nextToken()
 
-	for !(isKeyword(f.currToken) || f.currTypeIs(sqllexer.EOF)) {
+	for !(isKeyword(f.currToken) || f.currTypeIs(sqllexer.EOF) || f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
+		// [todo] - this should be broken down into a fromatSelectColumnStatement
 		sc := SelectedColumn{}
 
 		exp, _ := f.parseExpression()
@@ -72,6 +73,10 @@ func (f *Formatter) formatSelectStatement() string {
 		}
 
 		ss.Columns = append(ss.Columns, sc)
+	}
+
+	if f.currTokenIs(sqllexer.PUNCTUATION, ";") {
+		f.nextToken()
 	}
 
 	return ss.Format(0)

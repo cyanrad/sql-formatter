@@ -11,7 +11,7 @@ type SelectStatement struct {
 }
 
 func (ss SelectStatement) Format(indent int) string {
-	formatted := padding(indent) + "SELECT" + strings.Repeat(" ", FIRST_COLUMN_WIDTH-6)
+	formatted := padding(indent) + "SELECT" + padding(FIRST_COLUMN_WIDTH-6)
 	indentTracker := len(formatted)
 
 	for i := 0; i < len(ss.Columns); i++ {

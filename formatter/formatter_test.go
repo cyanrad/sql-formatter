@@ -27,6 +27,10 @@ func TestBasicSelect(t *testing.T) {
 			"SELECT  10\n;\nSELECT  'what'\n;",
 		},
 		{
+			"SELECT 10; SELECT 'what'\n;",
+			"SELECT  10\n;\nSELECT  'what'\n;",
+		},
+		{
 			"SELECT 6, 7.89, .2",
 			`SELECT  6,
         7.89,
@@ -145,7 +149,15 @@ SELECT  'unknown'                                                               
 }
 
 func TestGeneral(t *testing.T) {
-	input := "SELECT (4)"
+	input := `
+SELECT 4
+;
+
+SELECT 5
+;	
+	`
 	f := Create(input)
-	t.Log(f.tokens)
+	fmt.Println(f.tokens)
+	formatted := f.Format()
+	fmt.Println(formatted)
 }
