@@ -136,3 +136,13 @@ func isBoolean(t sqllexer.Token) bool {
 	_, ok := booleanIdentifiers[strings.ToUpper(t.Value)]
 	return ok && t.Type == sqllexer.IDENT
 }
+
+var prefixOperator = map[string]struct{}{
+	"-": {},
+	"+": {},
+}
+
+func isPrefixOperator(t sqllexer.Token) bool {
+	_, ok := prefixOperator[t.Value]
+	return ok && t.Type == sqllexer.IDENT
+}

@@ -69,9 +69,9 @@ func (oe OperatorExpression) Type() string    { return "operator" }
 func (oe OperatorExpression) String() string {
 	switch oe.Token.Value {
 	case ",":
-		return ", "
-	case ".":
-		return "."
+		return oe.Token.Value + " "
+	case ".", "(", ")":
+		return oe.Token.Value
 	default:
 		return " " + oe.Token.Value + " "
 	}
@@ -136,6 +136,7 @@ func (ce CallExpression) String() string {
 
 type GroupedExpression struct {
 	Exps     []Expression
+	Comment  CommentExpression
 	HasParen bool
 }
 
@@ -197,3 +198,11 @@ func (ae AsExpression) String() string {
 
 	return str
 }
+
+type CommentExpression struct {
+	Token sqllexer.Token
+}
+
+func (ce CommentExpression) expressionNode() {}
+func (ce CommentExpression) Type() string    { return "comment" }
+func (ce CommentExpression) String() string  { return ce.Token.Value }

@@ -66,13 +66,27 @@ func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
 	sc := SelectedColumn{Exps: []Expression{}}
 
 	var exp Expression
-	for !(f.currTokenIs(sqllexer.PUNCTUATION, ",") ||
+	for i := 0; !(f.currTokenIs(sqllexer.PUNCTUATION, ",") ||
 		f.currTokenIs(sqllexer.IDENT, "AS") ||
 		f.currTypeIs(sqllexer.EOF) ||
-		f.currTokenIs(sqllexer.PUNCTUATION, ";")) { // [todo] I should prolly turn this into a map
+		f.currTokenIs(sqllexer.PUNCTUATION, ";")); i++ { // [todo] I should prolly turn this into a map
 		exp = f.parseExpression()
 		if exp == nil {
 			break
+		}
+
+		if exp.Type() == "comment" {
+			sc.Comment = exp.(CommentExpression)
+			if i == 0 {
+				break
+			}
+			f.nextToken()
+			continue
+		} else if exp.Type() == "group" {
+			group := exp.(GroupedExpression)
+			if group.Comment.String() != "" {
+				sc.Comment = group.Comment
+			}
 		}
 
 		// handling the final typecast
@@ -87,19 +101,24 @@ func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
 		f.nextToken()
 	}
 
+	sc.HandlePotentialComment(f)
 	if f.currTokenIs(sqllexer.IDENT, "AS") {
 		sc.hasAlias = true
-		if (f.peekTypeIs(sqllexer.IDENT) && !isStatementKeyword(f.peekToken)) || f.peekTypeIs(sqllexer.QUOTED_IDENT) {
-			f.nextToken()
-			sc.Alias = AsExpression{Token: f.currToken}
-		}
 		f.nextToken()
+		sc.HandlePotentialComment(f)
+
+		if (f.currTypeIs(sqllexer.IDENT) && !isStatementKeyword(f.currToken)) || f.currTypeIs(sqllexer.QUOTED_IDENT) {
+			sc.Alias = AsExpression{Token: f.currToken}
+			f.nextToken()
+		}
 	}
 
+	sc.HandlePotentialComment(f)
 	if f.currTokenIs(sqllexer.PUNCTUATION, ",") {
 		f.nextToken()
 	}
 
+	sc.HandlePotentialComment(f)
 	return sc
 }
 
@@ -130,6 +149,8 @@ func (f *Formatter) parseExpression() Expression {
 		exp = f.parseTypecastExpression()
 	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) {
 		exp = f.parseOperatorExpression()
+	} else if f.currTypeIs(sqllexer.COMMENT) {
+		exp = f.parseCommentExpression()
 	}
 
 	return exp
@@ -223,7 +244,12 @@ func (f *Formatter) parseGroupedExpression() GroupedExpression {
 		e := f.parseExpression()
 		if e == nil {
 			break
+		} else if e.Type() == "comment" {
+			group.Comment = e.(CommentExpression)
+			f.nextToken()
+			continue
 		}
+
 		f.nextToken()
 
 		group.Exps = append(group.Exps, e)
@@ -254,6 +280,10 @@ func (f *Formatter) parseDatatypeExpression() DatatypeExpression {
 	}
 
 	return exp
+}
+
+func (f *Formatter) parseCommentExpression() CommentExpression {
+	return CommentExpression{Token: f.currToken}
 }
 
 func (f *Formatter) nextToken() {

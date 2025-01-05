@@ -63,3 +63,21 @@ SELECT  x                                                                       
         y :: INT,
         kay.the                                                                                       :: WASSUP(12, 18) AS yay,
         wot :: 
+
+
+SELECT  x, -- comment
+        xyz + -- comment
+        4
+        (what - the || --okay
+        'string'),
+        bla :: INT AS -- this is bad
+        col,
+        -- line column
+        another_line
+
+SELECT  x, -- comment
+        xyz + 4 -- comment
+        (what - the || 'string'), --okay
+        bla                                                                                           :: INT            AS col,-- this is bad
+        -- line column
+        another_line

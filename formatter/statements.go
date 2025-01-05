@@ -1,5 +1,7 @@
 package formatter
 
+import "github.com/DataDog/go-sqllexer"
+
 type SelectStatement struct {
 	Columns []SelectedColumn
 }
@@ -8,12 +10,23 @@ func (ss SelectStatement) Format(indent int) string {
 	formatted := padding(indent, 0) + "SELECT" + padding(FIRST_COLUMN_WIDTH-6, 1)
 	indentTracker := len(formatted)
 
-	for i := 0; i < len(ss.Columns); i++ {
-		formatted += ss.Columns[i].Format(indentTracker)
+	for i, c := range ss.Columns {
+		formatted += c.Format(indentTracker)
+
+		if i != len(ss.Columns)-1 && len(c.Exps) > 0 { // second condition is in case of comment line
+			formatted += ","
+		}
+
+		if c.Comment.String() != "" {
+			if len(c.Exps) > 0 {
+				formatted += padding(1, 0)
+			}
+			formatted += c.Comment.String()
+		}
 
 		if i != len(ss.Columns)-1 {
 			padding := padding(indent+FIRST_COLUMN_WIDTH, 0)
-			formatted += ",\n" + padding
+			formatted += "\n" + padding
 			indentTracker = len(padding)
 		}
 	}
@@ -25,6 +38,7 @@ type SelectedColumn struct {
 	Exps     []Expression
 	Cast     TypecastExpression
 	Alias    AsExpression
+	Comment  CommentExpression
 	hasAlias bool
 	hasCast  bool
 }
@@ -57,6 +71,13 @@ func (sc SelectedColumn) Format(indent int) string {
 	}
 
 	return formatted
+}
+
+func (sc *SelectedColumn) HandlePotentialComment(f *Formatter) {
+	if f.currTypeIs(sqllexer.COMMENT) {
+		sc.Comment = CommentExpression{Token: f.currToken}
+		f.nextToken()
+	}
 }
 
 // this is very fucking stupid holy shit

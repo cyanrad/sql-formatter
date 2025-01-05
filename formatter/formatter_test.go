@@ -153,6 +153,23 @@ SELECT  'unknown'                                                               
 			`SELECT  LAG(date_ending_nk, 1) OVER (PARTITION BY c.user_sk ORDER BY date_sign_nk, contract_nk)       :: DATE           AS previous_contract_date_ending
 ;`,
 		},
+		{
+			`SELECT  x, -- comment
+        xyz + -- comment
+        4,
+        (what - the || --okay
+        'string'),
+        bla :: INT AS -- this is bad
+        col,
+        -- line column
+        another_line`,
+			`SELECT  x, -- comment
+        xyz + 4, -- comment
+        (what - the || 'string'), --okay
+        bla                                                                                           :: INT            AS col, -- line column
+        another_line
+;`,
+		},
 	}
 
 	for i := 0; i < len(tests); i++ {
@@ -172,7 +189,9 @@ SELECT  'unknown'                                                               
 
 func TestGeneral(t *testing.T) {
 	input := `
-SELECT  xyz ::INT :: INT AS what
+SELECT  xyz,
+-- comment
+x
 `
 	f := Create(input)
 	fmt.Println(f.tokens)
