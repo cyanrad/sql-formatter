@@ -1,6 +1,8 @@
 package formatter
 
 import (
+	"strings"
+
 	"github.com/DataDog/go-sqllexer"
 )
 
@@ -66,6 +68,7 @@ func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
 	sc := SelectedColumn{Exps: []Expression{}}
 
 	var exp Expression
+	var prefixExpOperator OperatorExpression
 	for i := 0; !(f.currTokenIs(sqllexer.PUNCTUATION, ",") ||
 		f.currTokenIs(sqllexer.IDENT, "AS") ||
 		f.currTypeIs(sqllexer.EOF) ||
@@ -82,10 +85,32 @@ func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
 			}
 			f.nextToken()
 			continue
+		} else if isPrefixOperator(strings.Trim(exp.String(), " ")) {
+			if f.isPotentialPrefixExpression(sc) {
+				prefixExpOperator = exp.(OperatorExpression)
+				f.nextToken()
+				continue
+			}
 		} else if exp.Type() == "group" {
 			group := exp.(GroupedExpression)
 			if group.Comment.String() != "" {
 				sc.Comment = group.Comment
+			}
+		}
+
+		// this means that the previous expression was a valid prefix operator
+		// now we need to check if the current expression can take the prefix
+		if prefixExpOperator.String() != "" {
+			if isValidPrefixOperatorExpression(exp) {
+				exp = PrefixOperatorExpression{Operator: prefixExpOperator.Token, Exp: exp}
+				prefixExpOperator = OperatorExpression{} // resetting
+			} else {
+				// in this case we treat current and next exp as seperate expressions
+				sc.Exps = append(sc.Exps, prefixExpOperator)
+				sc.Exps = append(sc.Exps, exp)
+				prefixExpOperator = OperatorExpression{} // resetting
+				f.nextToken()
+				continue
 			}
 		}
 
@@ -98,6 +123,13 @@ func (f *Formatter) formatSelectedColumnStatement() SelectedColumn {
 		}
 
 		sc.Exps = append(sc.Exps, exp)
+		f.nextToken()
+	}
+
+	if prefixExpOperator.String() != "" {
+		// in this case we treat current and next exp as seperate expressions
+		sc.Exps = append(sc.Exps, prefixExpOperator)
+		prefixExpOperator = OperatorExpression{} // resetting
 		f.nextToken()
 	}
 
@@ -147,7 +179,7 @@ func (f *Formatter) parseExpression() Expression {
 		}
 	} else if f.currTokenIs(sqllexer.OPERATOR, "::") {
 		exp = f.parseTypecastExpression()
-	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) {
+	} else if f.currTypeIs(sqllexer.PUNCTUATION) || f.currTypeIs(sqllexer.OPERATOR) || f.currTypeIs(sqllexer.WILDCARD) {
 		exp = f.parseOperatorExpression()
 	} else if f.currTypeIs(sqllexer.COMMENT) {
 		exp = f.parseCommentExpression()
@@ -237,17 +269,41 @@ func (f *Formatter) parseGroupedExpression() GroupedExpression {
 	}
 	f.nextToken()
 
+	var prefixExpOperator OperatorExpression
 	for !(f.currTokenIs(sqllexer.PUNCTUATION, ")") ||
 		f.currTokenIs(sqllexer.IDENT, "AS") ||
 		f.currTypeIs(sqllexer.EOF) ||
 		f.currTokenIs(sqllexer.PUNCTUATION, ";")) {
 		e := f.parseExpression()
+
 		if e == nil {
 			break
 		} else if e.Type() == "comment" {
 			group.Comment = e.(CommentExpression)
 			f.nextToken()
 			continue
+		} else if isPrefixOperator(strings.Trim(e.String(), " ")) {
+			if f.isPotentialPrefixExpression(group) {
+				prefixExpOperator = e.(OperatorExpression)
+				f.nextToken()
+				continue
+			}
+		}
+
+		// this means that the previous expression was a valid prefix operator
+		// now we need to check if the current expression can take the prefix
+		if prefixExpOperator.String() != "" {
+			if isValidPrefixOperatorExpression(e) {
+				e = PrefixOperatorExpression{Operator: prefixExpOperator.Token, Exp: e}
+				prefixExpOperator = OperatorExpression{} // resetting
+			} else {
+				// in this case we treat current and next exp as seperate expressions
+				group.Exps = append(group.Exps, prefixExpOperator)
+				group.Exps = append(group.Exps, e)
+				prefixExpOperator = OperatorExpression{} // resetting
+				f.nextToken()
+				continue
+			}
 		}
 
 		f.nextToken()
@@ -295,4 +351,33 @@ func (f *Formatter) nextToken() {
 	} else {
 		f.peekToken = sqllexer.Token{Type: sqllexer.EOF, Value: ""}
 	}
+}
+
+// I'm going to hell for this code
+// Assumes it's being called when current token is a valid prefix operator
+// this is happening because I fucking suck at programming
+// returns either an operator expression or prefix expression
+func (f *Formatter) isPotentialPrefixExpression(me MultiExpression) bool {
+	Exps := me.Expressions()
+	if len(Exps) == 0 {
+		return true
+	}
+
+	prevExp := Exps[len(Exps)-1]
+	leftParen := sqllexer.Token{Type: sqllexer.PUNCTUATION, Value: "("}
+	if !isValidPrefixOperatorExpression(prevExp) ||
+		f.index == 0 ||
+		f.tokens[f.index-1] == leftParen {
+		return true
+	}
+	return false
+}
+
+func isValidPrefixOperatorExpression(e Expression) bool {
+	return e.Type() == "identifier" ||
+		e.Type() == "numeric" ||
+		e.Type() == "quoted-identifier" ||
+		e.Type() == "prefix-operator" ||
+		e.Type() == "group" ||
+		e.Type() == "call"
 }

@@ -142,7 +142,7 @@ var prefixOperator = map[string]struct{}{
 	"+": {},
 }
 
-func isPrefixOperator(t sqllexer.Token) bool {
-	_, ok := prefixOperator[t.Value]
-	return ok && t.Type == sqllexer.IDENT
+func isPrefixOperator(op string) bool {
+	_, ok := prefixOperator[op]
+	return ok
 }

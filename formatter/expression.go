@@ -12,6 +12,10 @@ type Expression interface {
 	Type() string
 }
 
+type MultiExpression interface {
+	Expressions() []Expression
+}
+
 type NumericExpression struct {
 	Token sqllexer.Token
 }
@@ -70,11 +74,22 @@ func (oe OperatorExpression) String() string {
 	switch oe.Token.Value {
 	case ",":
 		return oe.Token.Value + " "
-	case ".", "(", ")":
+	case ".", "(", ")", "":
 		return oe.Token.Value
 	default:
 		return " " + oe.Token.Value + " "
 	}
+}
+
+type PrefixOperatorExpression struct {
+	Operator sqllexer.Token
+	Exp      Expression
+}
+
+func (poe PrefixOperatorExpression) expressionNode() {}
+func (poe PrefixOperatorExpression) Type() string    { return "prefix-operator" }
+func (poe PrefixOperatorExpression) String() string {
+	return poe.Operator.Value + poe.Exp.String()
 }
 
 type TypecastExpression struct {
@@ -140,8 +155,9 @@ type GroupedExpression struct {
 	HasParen bool
 }
 
-func (ge GroupedExpression) expressionNode() {}
-func (ge GroupedExpression) Type() string    { return "group" }
+func (ge GroupedExpression) expressionNode()           {}
+func (ge GroupedExpression) Type() string              { return "group" }
+func (ge GroupedExpression) Expressions() []Expression { return ge.Exps }
 func (ge GroupedExpression) String() string {
 	str := ""
 	if ge.HasParen {

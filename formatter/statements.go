@@ -43,6 +43,8 @@ type SelectedColumn struct {
 	hasCast  bool
 }
 
+func (sc SelectedColumn) Expressions() []Expression { return sc.Exps }
+
 func (sc SelectedColumn) Format(indent int) string {
 	formatted := ""
 

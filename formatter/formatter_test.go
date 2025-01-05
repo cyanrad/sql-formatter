@@ -170,6 +170,11 @@ SELECT  'unknown'                                                               
         another_line
 ;`,
 		},
+		{
+			"SELECT  -xyz + -  asdf (-xyz || asdf - 'asdf') + (- *)+ (-'asdf') - :: INT AS what,",
+			`SELECT  -xyz + -asdf (-xyz || asdf - 'asdf') + ( -  * ) + ( - 'asdf') -                               :: INT            AS what
+;`,
+		},
 	}
 
 	for i := 0; i < len(tests); i++ {
@@ -189,9 +194,7 @@ SELECT  'unknown'                                                               
 
 func TestGeneral(t *testing.T) {
 	input := `
-SELECT  xyz,
--- comment
-x
+SELECT -xyz + -  asdf (-xyz || asdf - 'asdf') + (- *)+ (-'asdf') - ++asdf :: INT AS what,
 `
 	f := Create(input)
 	fmt.Println(f.tokens)
